@@ -33,12 +33,17 @@ import blockchaintools
 if __name__ == "__main__":
     blockchain = blockchaintools.Blockchain()
     database = [
-        {"amount": 3}, {"amount": 2}, {"test": 2}
+        "amount 3", "amount 2", "amount 8", "amount 30", "amount 40"
         ]
 
     for data in database:
         blockchain.mine_block(blockchaintools.Block(data))
 
+    for block in blockchain.chain:
+        print(block)
+    blockchain.chain[4].data = "hack"
+    print(blockchain.is_blockchain_valid())
+    print("\n\n\n\n")
     for block in blockchain.chain:
         print(block)
     # uvicorn.run(app, host="0.0.0.0", port=8000)

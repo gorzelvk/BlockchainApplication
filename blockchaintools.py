@@ -1,7 +1,6 @@
 """ This file contains functions and tools required to create blockchain network """
 import hashlib
 import itertools
-from typing import Optional
 from datetime import datetime
 
 GENESIS_HASH = '0' * 64
@@ -31,11 +30,14 @@ class Block:
     def __init__(self, data):
         self.data = data
         self.number = next(Block.new_block_number) + 1
-        self.timestamp = datetime.now()
+        self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def get_hash(self):
-        self.hash = compute_hash(self.previous_block_hash, self.number, self.data, self.nonce)
+        self.hash = compute_hash(self.previous_block_hash, self.number, self.data, self.nonce, self.timestamp)
         return self.hash
+
+    def get_previous_block_hash(self) -> str:
+        return self.previous_block_hash
 
     def get_data(self) -> dict:
         return self.data
@@ -47,16 +49,18 @@ class Block:
         return self.timestamp
 
     def __str__(self) -> str:
-        return str('\nBlock number: %s\nBlock hash: %s\nPrevious block hash: %s\nBlock data: %s\nBlock nonce: %s\nBlock timestap: %s' % (
-            self.number,
-            self.hash,
-            self.previous_block_hash,
-            self.get_data(),
-            self.get_nonce(),
-            self.get_timestamp()
-            ))
+        return str('\nBlock number: %s\nBlock hash: %s\nPrevious block hash: %s'
+                   '\nBlock data: %s\nBlock nonce: %s\nBlock timestamp: %s' % (
+                    self.number,
+                    self.hash,
+                    self.previous_block_hash,
+                    self.get_data(),
+                    self.get_nonce(),
+                    self.get_timestamp()
+                    ))
 
 
+# Blockchain class is used to verify new blocks and to add them to the chain
 class Blockchain:
     DIFFICULTY = 4
 
@@ -65,6 +69,9 @@ class Blockchain:
 
     def add_block(self, block):
         self.chain.append(block)
+
+    def remove_block(self, block):
+        self.chain.remove(block)
 
     def mine_block(self, block):
         try:
@@ -78,3 +85,15 @@ class Blockchain:
                 break
             else:
                 block.nonce += 1
+
+    def is_blockchain_valid(self):
+        newest_hash = self.chain[len(self.chain)-1].get_hash()  # current hash for current block
+        for i in range(1, len(self.chain)):
+            current_hash = self.chain[i-1].get_hash()  # current hash for previous block
+            previous_hash = self.chain[i].get_previous_block_hash()  # previous hash for current block
+            if previous_hash != current_hash or current_hash[:self.DIFFICULTY] != '0' * self.DIFFICULTY:
+                return False
+            if newest_hash[:self.DIFFICULTY] != '0' * self.DIFFICULTY:
+                return False
+        return True
+

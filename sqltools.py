@@ -105,13 +105,12 @@ def check_table_exist(table_name):
 
 
 # check if user already exists
-def check_user_exist(username):
+def check_user_exist(name):
     # access the users table and get all values from column "username"
-    users = Table("users", "name", "email", "username", "password")
-    data = users.getall()
-    usernames = [user.get('username') for user in data]
-
-    return False if username in usernames else True
+    users = Table("users", "name", "wallet_address", "email", "password")
+    data = users.get_all_values()
+    usernames = [user[0] for user in data]
+    return False if name in usernames else True
 
 
 # send money from one user to another

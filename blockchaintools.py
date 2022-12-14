@@ -20,17 +20,13 @@ def compute_hash(*args) -> str:
 
 # Block is a basic container of information in blockchain
 class Block:
-    hash = None
-    previous_block_hash = GENESIS_HASH
-    data = None
-    nonce = 0
-    number = None
-    new_block_number = itertools.count()
-
-    def __init__(self, data):
+    timestamp = None
+    def __init__(self, number=0, previous_block_hash=GENESIS_HASH, data=None, nonce=0, timestamp=0):
+        self.previous_block_hash = previous_block_hash
         self.data = data
-        self.number = next(Block.new_block_number) + 1
-        self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.nonce = nonce
+        self.number = number
+        self.timestamp = timestamp
 
     def get_hash(self):
         self.hash = compute_hash(self.previous_block_hash, self.number, self.data, self.nonce, self.timestamp)
@@ -64,8 +60,8 @@ class Block:
 class Blockchain:
     DIFFICULTY = 4
 
-    def __init__(self, chain=[]):
-        self.chain = chain
+    def __init__(self):
+        self.chain = []
 
     def add_block(self, block):
         self.chain.append(block)

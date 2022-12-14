@@ -1,4 +1,5 @@
 import hashlib
+import time
 
 import blockchaintools
 from flask import Flask, render_template, flash, redirect, session, request, logging, url_for
@@ -25,7 +26,7 @@ mysql = MySQL(app)
 def log_in_user(email):
     users = Table("users", "name", "email", "password", "wallet_address")
     user = users.get_single_value("email", email)
-
+    print(user)
     session['logged_in'] = True
     session['email'] = email
     session['name'] = user[0]
@@ -49,11 +50,11 @@ def register():
     if request.method == 'POST' and form.validate():
         name = form.name.data
         email = form.email.data
-        wallet_address = "kacper_address"
-        if sqltools.check_user_exist(name):
+        wallet_address = sha256_crypt.encrypt(email)
+        if sqltools.check_user_exist(email):
             password = sha256_crypt.encrypt(form.password.data)
             users.insert_values(name, email, password, wallet_address)
-            log_in_user(name)
+            log_in_user(email)
             return redirect(url_for('dashboard'))
         else:
             flash('User already exists', 'danger')
@@ -71,10 +72,10 @@ def login():
         users = Table("users", "name", "email", "password", "wallet_address")
         user = users.get_single_value("email", email)  # (Name, Email, Password, Wallet_Address)
         actual_password = None
-        if 2 in user:
+        try:
             actual_password = user[2]
-        print(actual_password)
-
+        except Exception:
+            pass
         if actual_password is None:
             flash('User not found', 'danger')
             return redirect(url_for('login'))
@@ -89,7 +90,38 @@ def login():
 
     return render_template('login.html')
 
+@app.route("/transaction", methods = ['GET', 'POST'])
+@is_logged_in
+def transaction():
+    form = SendMoneyForm(request.form)
+    balance = check_balance(session.get('email'))
 
+    if request.method == 'POST':
+        try:
+            send_money(session.get('email'), form.email.data, form.amount.data)
+            flash("Ozzies sent!", "success")
+        except Exception as e:
+            flash(str(e), "danger")
+
+        return redirect(url_for('transaction'))
+    return render_template('transaction.html', balance=balance, form=form, page='transaction')
+
+
+@app.route("/buy", methods=['GET', 'POST'])
+@is_logged_in
+def buy():
+    form = BuyForm(request.form)
+    balance = check_balance(session.get('email'))
+
+    if request.method == 'POST':
+        try:
+            send_money("bankacc@ozzychain.com", session.get('email'), form.amount.data)
+            flash(f"You bought {form.amount.data} Ozzies!", "success")
+        except Exception as e:
+            flash(str(e), "danger")
+
+        return redirect(url_for('buy'))
+    return render_template('buy.html', balance=balance, form=form, page='buy')
 @app.route("/logout")
 @is_logged_in
 def logout():
@@ -101,24 +133,25 @@ def logout():
 @app.route("/dashboard")
 @is_logged_in
 def dashboard():
-    return render_template('dashboard.html', session=session)
+    blockchain = get_blockchain().chain
+    timenow = time.strftime("%I:%M %p")
+    return render_template('dashboard.html', session=session, timenow=timenow, blockchain=blockchain, page='dashboard')
 
 @app.route("/")
 def landing_page():
+    #test_blockchain()
+    send_money(
+        "bankacc@ozzychain.com",
+        "kacpergo@email.com",
+        #"newacc@o2.pl",
+        "30"
+    )
     # users.insert_values("test", hashlib.sha256().update("wallet".encode('utf-8')), "email", "password")
     # users.drop_table()
     return render_template('landing_page.html')
 
 
 if __name__ == "__main__":
-    blockchain = blockchaintools.Blockchain()
-    database = [
-        "amount 3", "amount 2", "amount 8", "amount 30", "amount 40"
-        ]
-
-    for data in database:
-        blockchain.mine_block(blockchaintools.Block(data))
-
     app.secret_key = 'b547dd6982e53290703af3da6d4fb016647f2edbb169897987c16b9bf2c81f38'
     app.run(debug=True)
 

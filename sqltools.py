@@ -1,3 +1,6 @@
+import itertools
+from datetime import datetime
+
 import blockchaintools
 from app import mysql, session
 from blockchaintools import Block, Blockchain
@@ -105,12 +108,12 @@ def check_table_exist(table_name):
 
 
 # check if user already exists
-def check_user_exist(name):
+def check_user_exist(email):
     # access the users table and get all values from column "username"
     users = Table("users", "name", "wallet_address", "email", "password")
     data = users.get_all_values()
-    usernames = [user[0] for user in data]
-    return False if name in usernames else True
+    usernames = [user[1] for user in data]
+    return False if email in usernames else True
 
 
 # send money from one user to another
@@ -122,7 +125,7 @@ def send_money(sender, recipient, amount):
         raise InvalidTransactionException("Invalid Transaction.")
 
     # verify that the user has enough money to send (exception if it is the BANK)
-    if amount > check_balance(sender) and sender != "BANK":
+    if amount > check_balance(sender) and sender != "bankacc@ozzychain.com":
         raise InsufficientFundsException("Insufficient Funds.")
 
     # verify that the user is not sending money to themselves or amount is less than or 0
@@ -135,22 +138,24 @@ def send_money(sender, recipient, amount):
 
     # update the blockchain and sync to mysql
     blockchain = get_blockchain()
-    data = "%s-->%s-->%s" % (sender, recipient, amount)
-    blockchaintools.Blockchain.mine_block(Block(data=data))
+    number = len(blockchain.chain) + 1
+    data = "%s-->%s-->%s" %(sender, recipient, amount)
+    blockchain.mine_block(blockchaintools.Block(number=number, data=data, timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     sync_blockchain(blockchain)
 
 
 # check user's account balance
-def check_balance(username):
+def check_balance(email):
     initial_balance = 0.00
     blockchain = get_blockchain()
 
     # loop through the blockchain and update balance
     for block in blockchain.chain:
-        data = block.data.split("-->")
-        if username == data[0]:
+        data = block.data
+        data = data.split('-->')
+        if email == data[0]:
             initial_balance -= float(data[2])
-        elif username == data[1]:
+        elif email == data[1]:
             initial_balance += float(data[2])
     return initial_balance
 
@@ -158,10 +163,9 @@ def check_balance(username):
 # get the blockchain from mysql and convert to Blockchain object
 def get_blockchain():
     blockchain = Blockchain()
-    blockchain_sql = Table("blockchain", "number", "hash", "previous", "data", "nonce")
+    blockchain_sql = Table("blockchain", "number", "hash", "previous", "data", "nonce", "timestamp")
     for b in blockchain_sql.get_all_values():
-        blockchain.add_block(Block(int(b.get('number')), b.get('previous'), b.get('data'), int(b.get('nonce'))))
-
+        blockchain.add_block(Block(number=int(b[0]), previous_block_hash=b[2], data=b[3], nonce=int(b[4]), timestamp=b[5]))
     return blockchain
 
 
@@ -169,6 +173,17 @@ def get_blockchain():
 def sync_blockchain(blockchain):
     blockchain_sql = Table("blockchain", "number", "hash", "previous", "data", "nonce", "timestamp")
     blockchain_sql.delete_all_values()
+    for b in blockchain.chain:
+        blockchain_sql.insert_values(str(b.number), b.get_hash(), b.previous_block_hash, b.data, b.nonce, b.timestamp)
 
-    for block in blockchain.chain:
-        blockchain_sql.insert_values(str(block.number), block.hash(), block.previous_hash, block.data, block.nonce, block.timestamp)
+
+# def test_blockchain():
+#     blockchain = blockchaintools.Blockchain()
+#     database = [
+#         "amount 3", "amount 2", "amount 8", "amount 30", "amount 40"
+#     ]
+#
+#     for data in database:
+#         blockchain.mine_block(blockchaintools.Block(data=data))
+#
+#     sync_blockchain(blockchain)

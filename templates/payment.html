@@ -1,0 +1,16 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+{% include 'includes/_messages.html' %}
+<form action="" method="POST">
+  <script src="https://checkout.stripe.com/checkout.js" class="stripe-button"
+        data-key="{{ key }}"
+        data-description="You are paying for Ozzies"
+        data-amount="{{ price }}"
+        data-locale="auto">
+  </script>
+</form>
+{% endblock %}
+
+
+

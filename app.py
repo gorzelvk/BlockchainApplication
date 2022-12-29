@@ -1,32 +1,48 @@
-import hashlib
 import time
-
-import blockchaintools
-from flask import Flask, render_template, flash, redirect, session, request, logging, url_for
+import stripe
+import sqltools
+from flask import Flask, render_template, flash, redirect, session, request, logging, url_for, jsonify
 from passlib.hash import sha256_crypt
 from flask_mysqldb import MySQL
 from functools import wraps
 
-import sqltools
+from blockchaintools import INITIAL_COIN_AMOUNT, PRICE_LIST, INITIAL_PRICE
 from sqltools import *
 from forms import *
 
 app = Flask(__name__)
 
+# database setup
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = 'OzzyCoin'
 app.config['MYSQL_DB'] = 'OzzyChain'
 app.config['MYSQL_CURSOR'] = 'DictCursor'
 
+stripe_keys = {
+  'secret_key': 'sk_test_7mJuPfZsBzc3JkrANrFrcDqC',
+  'publishable_key': 'pk_test_51AROWSJX9HHJ5bycpEUP9dK39tXufyuWogSUdeweyZEXy3LC7M8yc5d9NlQ96fRCVL0BlAu7Nqt4V7N5xZjJnrkp005fDiTMIr'
+}
+stripe.api_key = stripe_keys['secret_key']
 
 mysql = MySQL(app)
 
+@app.route('/payment', methods=['GET', 'POST'])
+def payment():
+    price = request.args['price']
+    amount = request.args['amount']
+    if request.method == 'POST':
+        send_money("bankacc@ozzychain.com", session.get('email'), amount)
+        flash(f"You bought {amount} Ozzies!", "success")
+        return render_template('charge.html', key=stripe_keys['publishable_key'], amount=amount)
+    return render_template('payment.html', key=stripe_keys['publishable_key'], price=float(price)*float(amount))
+@app.route('/charge', methods=['GET', 'POST'])
+def charge():
+    return render_template('charge.html')
 
 def log_in_user(email):
     users = Table("users", "name", "email", "password", "wallet_address")
     user = users.get_single_value("email", email)
-    print(user)
     session['logged_in'] = True
     session['email'] = email
     session['name'] = user[0]
@@ -59,7 +75,6 @@ def register():
         else:
             flash('User already exists', 'danger')
             return redirect(url_for('register'))
-
     return render_template('register.html', form=form)
 
 
@@ -68,9 +83,8 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password_provided = request.form['password']
-
         users = Table("users", "name", "email", "password", "wallet_address")
-        user = users.get_single_value("email", email)  # (Name, Email, Password, Wallet_Address)
+        user = users.get_single_value("email", email)
         actual_password = None
         try:
             actual_password = user[2]
@@ -90,7 +104,8 @@ def login():
 
     return render_template('login.html')
 
-@app.route("/transaction", methods = ['GET', 'POST'])
+
+@app.route("/transaction", methods=['GET', 'POST'])
 @is_logged_in
 def transaction():
     form = SendMoneyForm(request.form)
@@ -110,18 +125,39 @@ def transaction():
 @app.route("/buy", methods=['GET', 'POST'])
 @is_logged_in
 def buy():
-    form = BuyForm(request.form)
-    balance = check_balance(session.get('email'))
+    price_list = []
+    ozzy_price_sql = Table("ozzyprice", "price")
+    ozzy_price = ozzy_price_sql.get_all_values()
+    for i in range(len(ozzy_price)):
+        price_list.append(float(ozzy_price[i][0]))
 
+    form = BuyForm(request.form)
+    print(form.amount.data)
+    balance = check_balance(session.get('email'))
     if request.method == 'POST':
         try:
-            send_money("bankacc@ozzychain.com", session.get('email'), form.amount.data)
-            flash(f"You bought {form.amount.data} Ozzies!", "success")
+            price = price_list[-1] * 100
+            return redirect(url_for('payment', price=price, amount=form.amount.data))
         except Exception as e:
             flash(str(e), "danger")
-
         return redirect(url_for('buy'))
-    return render_template('buy.html', balance=balance, form=form, page='buy')
+    return render_template('buy.html', balance=balance, form=form, page='buy', key=stripe_keys['publishable_key'])
+
+
+@app.route("/sell", methods=['GET', 'POST'])
+@is_logged_in
+def sell():
+    form = BuyForm(request.form)
+    balance = check_balance(session.get('email'))
+    if request.method == 'POST':
+        try:
+            send_money(session.get('email'), "bankacc@ozzychain.com", form.amount.data)
+            flash(f"You sold {form.amount.data} Ozzies!", "success")
+        except Exception as e:
+            flash(str(e), "danger")
+        return redirect(url_for('sell'))
+    return render_template('sell.html', balance=balance, form=form, page='sell')
+
 @app.route("/logout")
 @is_logged_in
 def logout():
@@ -133,25 +169,25 @@ def logout():
 @app.route("/dashboard")
 @is_logged_in
 def dashboard():
+    price_list = []
+    ozzy_price_sql = Table("ozzyprice", "price")
+    ozzy_price = ozzy_price_sql.get_all_values()
+    for i in range(len(ozzy_price)):
+        price_list.append(round(float(ozzy_price[i][0]), 3))
+
+    print(price_list)
     blockchain = get_blockchain().chain
     timenow = time.strftime("%I:%M %p")
-    return render_template('dashboard.html', session=session, timenow=timenow, blockchain=blockchain, page='dashboard')
+    return render_template('dashboard.html', session=session, timenow=timenow, blockchain=blockchain, page='dashboard', ozzy_price=price_list)
+
 
 @app.route("/")
 def landing_page():
-    #test_blockchain()
-    send_money(
-        "bankacc@ozzychain.com",
-        "kacpergo@email.com",
-        #"newacc@o2.pl",
-        "30"
-    )
-    # users.insert_values("test", hashlib.sha256().update("wallet".encode('utf-8')), "email", "password")
-    # users.drop_table()
     return render_template('landing_page.html')
 
 
 if __name__ == "__main__":
+    # secret key is used to prevent cookie tampering
     app.secret_key = 'b547dd6982e53290703af3da6d4fb016647f2edbb169897987c16b9bf2c81f38'
     app.run(debug=True)
 

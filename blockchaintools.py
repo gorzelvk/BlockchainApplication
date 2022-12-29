@@ -1,9 +1,10 @@
 """ This file contains functions and tools required to create blockchain network """
 import hashlib
-import itertools
-from datetime import datetime
 
 GENESIS_HASH = '0' * 64
+INITIAL_COIN_AMOUNT = 100000000.0
+INITIAL_PRICE = 1.0
+PRICE_LIST = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
 
 def compute_hash(*args) -> str:
@@ -21,6 +22,7 @@ def compute_hash(*args) -> str:
 # Block is a basic container of information in blockchain
 class Block:
     timestamp = None
+
     def __init__(self, number=0, previous_block_hash=GENESIS_HASH, data=None, nonce=0, timestamp=0):
         self.previous_block_hash = previous_block_hash
         self.data = data

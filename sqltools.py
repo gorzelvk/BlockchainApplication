@@ -17,13 +17,7 @@ class InsufficientFundsException(Exception):
 
 
 class Table:
-    # specify the table name and columns
-    # EXAMPLE table:
-    #               blockchain
-    # number    hash    previous   data    nonce
-    # -data-   -data-    -data-   -data-  -data-
-    #
-    # EXAMPLE initialization: ...Table("blockchain", "number", "hash", "previous", "data", "nonce")
+    # EXAMPLE initialization: ...Table("blockchain", "number", "hash", "previous", "data", "nonce", "timestamp")
     def __init__(self, table_name, *args):
         self.table = table_name
         self.columns = "(%s)" % ",".join(args)
@@ -142,11 +136,25 @@ def send_money(sender, recipient, amount):
     data = "%s-->%s-->%s" %(sender, recipient, amount)
     blockchain.mine_block(blockchaintools.Block(number=number, data=data, timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     sync_blockchain(blockchain)
+    calculate_ozzy_price()
+
+
+def calculate_ozzy_price():
+    ozzy_price_sql = Table("ozzyprice", "price")
+    bank_balance = check_balance('bankacc@ozzychain.com')
+    multiplier = (blockchaintools.INITIAL_COIN_AMOUNT - bank_balance) / 100000 + 1
+    price = blockchaintools.INITIAL_PRICE * multiplier
+    blockchaintools.PRICE_LIST.append(price)
+    ozzy_price_sql.insert_values(price)
+    return blockchaintools.PRICE_LIST
 
 
 # check user's account balance
 def check_balance(email):
-    initial_balance = 0.00
+    if email == 'bankacc@ozzychain.com':
+        initial_balance = blockchaintools.INITIAL_COIN_AMOUNT
+    else:
+        initial_balance = 0.0
     blockchain = get_blockchain()
 
     # loop through the blockchain and update balance
@@ -175,15 +183,3 @@ def sync_blockchain(blockchain):
     blockchain_sql.delete_all_values()
     for b in blockchain.chain:
         blockchain_sql.insert_values(str(b.number), b.get_hash(), b.previous_block_hash, b.data, b.nonce, b.timestamp)
-
-
-# def test_blockchain():
-#     blockchain = blockchaintools.Blockchain()
-#     database = [
-#         "amount 3", "amount 2", "amount 8", "amount 30", "amount 40"
-#     ]
-#
-#     for data in database:
-#         blockchain.mine_block(blockchaintools.Block(data=data))
-#
-#     sync_blockchain(blockchain)

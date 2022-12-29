@@ -1,0 +1,18 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+{% include 'includes/_messages.html' %}
+<p>Your current balance is {{ balance }} Ozzies</p>
+{% from "includes/_formhelpers.html" import render_field %}
+Insert amount of Ozzies
+<form action="" method="POST">
+  <div class="form-group">
+    <div class="form-label-group">
+      {{render_field(form.amount, class_="form-control")}}
+    </div>
+  </div>
+  <button type="submit" class="btn btn-primary btn-block">Pay with card</button>
+{% endblock %}
+
+
+

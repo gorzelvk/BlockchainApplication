@@ -126,10 +126,12 @@ def transaction():
 @is_logged_in
 def buy():
     price_list = []
-    ozzy_price_sql = Table("ozzyprice", "price")
+    timestamps_list = []
+    ozzy_price_sql = Table("ozzyprice", "price", "timestamp")
     ozzy_price = ozzy_price_sql.get_all_values()
     for i in range(len(ozzy_price)):
         price_list.append(float(ozzy_price[i][0]))
+        timestamps_list.append(ozzy_price[i][1])
 
     form = BuyForm(request.form)
     print(form.amount.data)
@@ -170,15 +172,18 @@ def logout():
 @is_logged_in
 def dashboard():
     price_list = []
-    ozzy_price_sql = Table("ozzyprice", "price")
+    timestamps_list = []
+    ozzy_price_sql = Table("ozzyprice", "price", "timestamp")
     ozzy_price = ozzy_price_sql.get_all_values()
     for i in range(len(ozzy_price)):
         price_list.append(round(float(ozzy_price[i][0]), 3))
+        timestamps_list.append(ozzy_price[i][1])
 
     print(price_list)
+    print(timestamps_list)
     blockchain = get_blockchain().chain
     timenow = time.strftime("%I:%M %p")
-    return render_template('dashboard.html', session=session, timenow=timenow, blockchain=blockchain, page='dashboard', ozzy_price=price_list)
+    return render_template('dashboard.html', session=session, timenow=timenow, blockchain=blockchain, page='dashboard', ozzy_price=price_list, timestamps=timestamps_list)
 
 
 @app.route("/")

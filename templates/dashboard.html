@@ -1,0 +1,74 @@
+{% extends 'layout.html' %}
+
+
+{% block body %}
+<h1>Welcome back, {{session.get('name')}}</h1>
+{% include 'includes/_messages.html' %}
+var xValue = {{ timestamps }}
+var yValue = {{ ozzy_price }}
+document.write(xValue)
+
+<div class="card mb-3">
+  <div class="card-header">
+    <i class="fas fa-chart-area"></i>
+    Price of Ozzy <img src="static/images/ozzy.jpg" alt="Ozzy_image" width="25" height="25">
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+  <div class="card-body">
+    <canvas id="myChart" style="width:100%;max-width:600px"></canvas>
+    <script xValues=xValue two="2">
+      new Chart("myChart", {
+  type: "line",
+  data: {
+    labels: document.currentScript.getAttribute('xValues'),
+    datasets: [{
+      fill: false,
+      lineTension: 0,
+      backgroundColor: "rgba(0,0,255,1.0)",
+      borderColor: "rgba(0,0,255,0.1)",
+      data: [6, 8, 3, 6, 20]
+    }]
+  },
+  options: {
+    legend: {display: false},
+    scales: {
+      yAxes: [{ticks: {min: 6, max:16}}],
+    }
+  }
+});
+    </script>
+  </div>
+  <div class="card-footer small text-muted">Updated today at {{ timenow }}</div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">
+    <i class="fas fa-table"></i>
+    Blockchain</div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Transaction</th>
+            <th>Transaction's hash</th>
+          </tr>
+        </thead>
+        <tfoot>
+        </tfoot>
+        <tbody>
+          {% for block in blockchain %}
+            <tr>
+              <td>{{block.number}}</td>
+              <td>{{block.data}}</td>
+              <td>{{block.get_hash()}}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer small text-muted">Updated today at {{ timenow }}</div>
+</div>
+{% endblock %}

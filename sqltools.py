@@ -140,12 +140,12 @@ def send_money(sender, recipient, amount):
 
 
 def calculate_ozzy_price():
-    ozzy_price_sql = Table("ozzyprice", "price", "timestamp")
+    ozzy_price_sql = Table("ozzyprice", "price")
     bank_balance = check_balance('bankacc@ozzychain.com')
     multiplier = (blockchaintools.INITIAL_COIN_AMOUNT - bank_balance) / 100000 + 1
     price = blockchaintools.INITIAL_PRICE * multiplier
     blockchaintools.PRICE_LIST.append(price)
-    ozzy_price_sql.insert_values(price, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    ozzy_price_sql.insert_values(price)
     return blockchaintools.PRICE_LIST
 
 

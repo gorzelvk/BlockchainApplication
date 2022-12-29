@@ -126,17 +126,22 @@ def transaction():
 @is_logged_in
 def buy():
     price_list = []
-    ozzy_price_sql = Table("ozzyprice", "price")
+    timestamp_list = []
+    ozzy_price_sql = Table("ozzyprice", "price", "timestamp")
     ozzy_price = ozzy_price_sql.get_all_values()
     for i in range(len(ozzy_price)):
         price_list.append(float(ozzy_price[i][0]))
+        timestamp_list.append(ozzy_price[i][1])
 
     form = BuyForm(request.form)
     print(form.amount.data)
     balance = check_balance(session.get('email'))
     if request.method == 'POST':
         try:
-            price = price_list[-1] * 100
+            if price_list:
+                price = price_list[-1] * 100
+            else:
+                price = 2.0 * 100
             return redirect(url_for('payment', price=price, amount=form.amount.data))
         except Exception as e:
             flash(str(e), "danger")
@@ -170,14 +175,17 @@ def logout():
 @is_logged_in
 def dashboard():
     price_list = []
-    ozzy_price_sql = Table("ozzyprice", "price")
+    timestamp_list = []
+    ozzy_price_sql = Table("ozzyprice", "price", "timestamp")
     ozzy_price = ozzy_price_sql.get_all_values()
     for i in range(len(ozzy_price)):
         price_list.append(round(float(ozzy_price[i][0]), 3))
+        timestamp_list.append(ozzy_price[i][1])
     print(price_list)
+    print(timestamp_list)
     blockchain = get_blockchain().chain
     timenow = time.strftime("%I:%M %p")
-    return render_template('dashboard.html', session=session, timenow=timenow, blockchain=blockchain, page='dashboard', price=price_list)
+    return render_template('dashboard.html', session=session, timenow=timenow, blockchain=blockchain, page='dashboard', price=price_list, timestamps=timestamp_list)
 
 
 @app.route("/")

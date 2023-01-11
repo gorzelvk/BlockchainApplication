@@ -1,7 +1,7 @@
 import time
 import stripe
 import sqltools
-from flask import Flask, render_template, flash, redirect, session, request, logging, url_for, jsonify
+from flask import Flask, render_template, flash, redirect, session, request, url_for
 from passlib.hash import sha256_crypt
 from flask_mysqldb import MySQL
 from functools import wraps
@@ -114,7 +114,7 @@ def transaction():
     if request.method == 'POST':
         try:
             send_money(session.get('email'), form.email.data, form.amount.data)
-            flash("Ozzies sent!", "success")
+            flash(f"{form.amount.data} Ozzies sent!", "success")
         except Exception as e:
             flash(str(e), "danger")
 
@@ -152,16 +152,21 @@ def buy():
 @app.route("/sell", methods=['GET', 'POST'])
 @is_logged_in
 def sell():
+    latest_ozzy_price = 2.0 * 100
+    ozzy_price_sql = Table("ozzyprice", "price", "timestamp")
+    ozzy_price = ozzy_price_sql.get_all_values()
+    if ozzy_price:
+        latest_ozzy_price = round(float(ozzy_price[-1][0]), 3)
     form = BuyForm(request.form)
     balance = check_balance(session.get('email'))
     if request.method == 'POST':
         try:
             send_money(session.get('email'), "bankacc@ozzychain.com", form.amount.data)
-            flash(f"You sold {form.amount.data} Ozzies!", "success")
+            flash(f"You sold {form.amount.data} Ozzies for {float(form.amount.data)*latest_ozzy_price}$", "success")
         except Exception as e:
             flash(str(e), "danger")
         return redirect(url_for('sell'))
-    return render_template('sell.html', balance=balance, form=form, page='sell')
+    return render_template('sell.html', balance=balance, form=form, page='sell', ozzy_price=latest_ozzy_price)
 
 @app.route("/logout")
 @is_logged_in
@@ -183,9 +188,11 @@ def dashboard():
         timestamp_list.append(ozzy_price[i][1])
     print(price_list)
     print(timestamp_list)
+    price_max = max(price_list)
     blockchain = get_blockchain().chain
     timenow = time.strftime("%I:%M %p")
-    return render_template('dashboard.html', session=session, timenow=timenow, blockchain=blockchain, page='dashboard', price=price_list, timestamps=timestamp_list)
+    return render_template('dashboard.html', session=session, timenow=timenow, blockchain=blockchain, page='dashboard',
+                           price=price_list, timestamps=timestamp_list, yMax=round(price_max+2))
 
 
 @app.route("/")

@@ -3,6 +3,7 @@
 {% block body %}
 {% include 'includes/_messages.html' %}
 <p>Your current balance is {{ balance }} Ozzies</p>
+<p>Current price of Ozzy is {{ ozzy_price }}</p>
 {% from "includes/_formhelpers.html" import render_field %}
 Insert amount of Ozzies
 <form action="" method="POST">

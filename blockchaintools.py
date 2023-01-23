@@ -67,9 +67,6 @@ class Blockchain:
     def add_block(self, block):
         self.chain.append(block)
 
-    def remove_block(self, block):
-        self.chain.remove(block)
-
     def mine_block(self, block):
         try:
             block.previous_block_hash = self.chain[-1].get_hash()

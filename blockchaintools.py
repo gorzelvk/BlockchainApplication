@@ -21,9 +21,8 @@ def compute_hash(*args) -> str:
 
 # Block is a basic container of information in blockchain
 class Block:
-    timestamp = None
 
-    def __init__(self, number=0, previous_block_hash=GENESIS_HASH, data=None, nonce=0, timestamp=0):
+    def __init__(self, number=0, previous_block_hash=GENESIS_HASH, data=None, nonce=0, timestamp=None):
         self.previous_block_hash = previous_block_hash
         self.data = data
         self.nonce = nonce
